@@ -55,30 +55,18 @@ public class HamsterChannelTrafficShapingHandler extends
 	    /*
 	     * Traffic accounting is recorded in ServerConnectionRecord instance
 	     */
-	    TrafficCounter tc = trafficCounter();
-	    serverConnectionRecord.setUri(((HttpRequest) msg).getUri());
-	    serverConnectionRecord.setRecievedBytes(Math.abs(tc
-		    .cumulativeReadBytes()));
-	    serverConnectionRecord.setSentBytes(tc.cumulativeWrittenBytes());
-	    serverConnectionRecord.setThroughput(tc.lastWrittenBytes() * 1000
-		    / (tc.checkInterval()));
-	    serverConnectionRecord.setTimestamp(new Timestamp(Calendar
-		    .getInstance().getTimeInMillis()));
-	    /*
-	     * Instance is added to List on last place (the last the newest)
-	     */
-	    if (serverConnectionList.contains(serverConnectionRecord)) {
-		serverConnectionList.remove(serverConnectionRecord);
-		addToConnectionList();
-	    } else {
-		addToConnectionList();
+	    String uri = ((HttpRequest) msg).getUri();
+	    if (uri != null) {
+		serverConnectionRecord.setUri(uri);
 	    }
+	    trafficAccounting();
 	}
 	super.channelRead(ctx, msg);
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+	trafficAccounting();
 	super.channelInactive(ctx);
     }
 
@@ -87,6 +75,9 @@ public class HamsterChannelTrafficShapingHandler extends
      * adds new one to the end.
      */
     private void addToConnectionList() {
+	if(serverConnectionRecord.getUri() == null) {
+	    return;
+	}
 	serverConnectionList.add(serverConnectionRecord);
 	if (serverConnectionList.size() > 16) {
 	    serverConnectionList.remove(0);
@@ -106,5 +97,25 @@ public class HamsterChannelTrafficShapingHandler extends
 	List<ServerConnectionRecord> list = new ArrayList<>(
 		serverConnectionList);
 	return list.listIterator(list.size());
+    }
+
+    private void trafficAccounting() {
+	TrafficCounter tc = trafficCounter();
+	serverConnectionRecord.setRecievedBytes(Math.abs(tc
+		.cumulativeReadBytes()));
+	serverConnectionRecord.setSentBytes(tc.cumulativeWrittenBytes());
+	serverConnectionRecord.setThroughput(tc.lastWrittenBytes() * 1000
+		/ (tc.checkInterval()));
+	serverConnectionRecord.setTimestamp(new Timestamp(Calendar
+		.getInstance().getTimeInMillis()));
+	/*
+	 * Instance is added to List on last place (the last the newest)
+	 */
+	if (serverConnectionList.contains(serverConnectionRecord)) {
+	    serverConnectionList.remove(serverConnectionRecord);
+	    addToConnectionList();
+	} else {
+	    addToConnectionList();
+	}
     }
 }
