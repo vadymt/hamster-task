@@ -56,9 +56,7 @@ public class HamsterChannelTrafficShapingHandler extends
 	     * Traffic accounting is recorded in ServerConnectionRecord instance
 	     */
 	    String uri = ((HttpRequest) msg).getUri();
-	    if (uri != null) {
-		serverConnectionRecord.setUri(uri);
-	    }
+	    serverConnectionRecord.setUri(uri);
 	    trafficAccounting();
 	}
 	super.channelRead(ctx, msg);
@@ -67,6 +65,9 @@ public class HamsterChannelTrafficShapingHandler extends
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
 	trafficAccounting();
+	if(serverConnectionRecord.getUri() == null) {
+	    serverConnectionRecord.setUri("No URI Accessed");
+	}
 	super.channelInactive(ctx);
     }
 
@@ -75,9 +76,6 @@ public class HamsterChannelTrafficShapingHandler extends
      * adds new one to the end.
      */
     private void addToConnectionList() {
-	if(serverConnectionRecord.getUri() == null) {
-	    return;
-	}
 	serverConnectionList.add(serverConnectionRecord);
 	if (serverConnectionList.size() > 16) {
 	    serverConnectionList.remove(0);
